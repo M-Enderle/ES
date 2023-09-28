@@ -26,8 +26,6 @@ def load_config_from_toml(file_path):
         return Config(database=Database(**toml.load(toml_file)["database"]))
 
 
-logging.basicConfig(level=logging.INFO)
-
 config_path = get_project_root() / "config.toml"
 config = load_config_from_toml(config_path)
 
