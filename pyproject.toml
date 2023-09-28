@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "es"
+version = "1.0.0"
+description = "Enderle Solutions Accounting"
+authors = ["moritz <contact@moritzenderle.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8 <3.13"
+pillow = "^10.0.1"
+psutil = "^5.9.5"
+tkcalendar = "^1.6.1"
+requests = "^2.31.0"
+beautifulsoup4 = "^4.12.2"
+pypdf2 = "^3.0.1"
+reportlab = "^4.0.5"
+numpy = "1.24.0"
+pyodbc = "^4.0.39"
+pyautogui = "^0.9.54"
+openpyxl = "^3.1.2"
+pandas = "2.0"
+toml = "^0.10.2"
+pydantic = "^2.4.2"
+pydantic-settings = "^2.0.3"
+sqlalchemy = "^2.0.21"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

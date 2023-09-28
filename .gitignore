@@ -1,0 +1,8 @@
+config.toml
+.vs
+.vscode
+__pycache__
+geckodriver.exe
+geckodriver.log
+deprecated
+```
