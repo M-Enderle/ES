@@ -1,7 +1,9 @@
+import logging
+
 import toml
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings
-import logging
+
 from es.utils.utils import get_project_root
 
 logger = logging.getLogger(__name__)
