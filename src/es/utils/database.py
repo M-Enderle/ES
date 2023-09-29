@@ -1,212 +1,200 @@
-import logging
-from typing import Any, List, Optional
+from sqlalchemy import create_engine, Column, ForeignKey, UniqueConstraint, Float
+from sqlalchemy import Integer, BigInteger, String, Text, LargeBinary, DateTime, Boolean, Float
+from sqlalchemy.orm import sessionmaker, relationship, backref, scoped_session
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.sql import func
+from es.utils.utils import get_project_root
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.sql import text
-from sqlalchemy import Boolean, Column, Date, Float, ForeignKeyConstraint, Identity, Index, Integer, LargeBinary, NCHAR, PrimaryKeyConstraint, String, TEXT, Table, Unicode, text
-from sqlalchemy.dialects.mssql import DATETIME2, MONEY, TIMESTAMP
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-import datetime
+# Create an SQLAlchemy engine
+engine = create_engine("sqlite:///" + str(get_project_root()) + "/es.db", echo=False)
 
-from es.utils import config
+# Create a base class to define all the database subclasses
+TableDeclarativeBase = declarative_base()
 
+# Bind the engine to the base class
+TableDeclarativeBase.metadata.bind = engine
 
-config = config.config
-logger = logging.getLogger(__name__)
-
-
-class Base(DeclarativeBase):
-    pass
-
-
-class ArtikelnummernLieferanten(Base):
-    __tablename__ = 'Artikelnummern_Lieferanten'
-    __table_args__ = (
-        PrimaryKeyConstraint('ArtikelNummer', name='Artikelnummern_Lieferanten$PrimaryKey'),
-        Index('Artikelnummern_Lieferanten$ArtikelNummer', 'ArtikelNummer')
-    )
-
-    ArtikelNummer: Mapped[str] = mapped_column(Unicode(255), primary_key=True)
-    SSMA_TimeStamp: Mapped[bytes] = mapped_column(TIMESTAMP)
-    Bezeichnung: Mapped[Optional[str]] = mapped_column(Unicode)
-    EKNetto: Mapped[Optional[Any]] = mapped_column(MONEY, server_default=text('((0))'))
-    VKBrutto: Mapped[Optional[Any]] = mapped_column(MONEY, server_default=text('((0))'))
-    Art: Mapped[Optional[str]] = mapped_column(Unicode(255))
-    Bemerkung: Mapped[Optional[str]] = mapped_column(Unicode)
-    Feld1: Mapped[Optional[bool]] = mapped_column(Boolean, server_default=text('((0))'))
-    Feld2: Mapped[Optional[str]] = mapped_column(Unicode(255))
-    Bild: Mapped[Optional[str]] = mapped_column(String(8000, 'SQL_Latin1_General_CP1_CI_AS'))
-    Link: Mapped[Optional[str]] = mapped_column(Unicode(255))
+# Create a Session class able to initialize database sessions
+session_factory = sessionmaker(bind=engine, expire_on_commit=False)
+Session = scoped_session(session_factory)
 
 
-t_Artikelstamm_ES = Table(
-    'Artikelstamm_ES', Base.metadata,
-    Column('ID', Unicode(255), nullable=False),
-    Column('Bezeichnung', Unicode(255)),
-    Column('VerkaufsPreis', MONEY, server_default=text('((0))')),
-    Column('Gruppe', Unicode(255)),
-    Column('Bemerkung', Unicode(255))
-)
+class Customer(TableDeclarativeBase):
+
+    __tablename__ = "customers"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    company_name = Column(String, nullable=True)
+    prename = Column(String, nullable=True)
+    surname = Column(String, nullable=True)
+    street = Column(String, nullable=False)
+    postal_code = Column(String, nullable=False)
+    city = Column(String, nullable=False)
+    country = Column(String, nullable=False)
+
+    invoices = relationship("Invoice", viewonly=True)
+
+    def __repr__(self):
+        if self.company_name:
+            return f"Customer {self.id} - {self.company_name}"
+        return f"Customer {self.id} - {self.prename} {self.surname}"
 
 
-class EntnahmeArtikel(Base):
-    __tablename__ = 'Entnahme_Artikel'
-    __table_args__ = (
-        PrimaryKeyConstraint('ID', name='3_Entnahme_Artikel$PrimaryKey'),
-        Index('3_Entnahme_Artikel$ArtikelID', 'ArtikelNummer'),
-        Index('3_Entnahme_Artikel$ArtikelNummer', 'ID'),
-        Index('3_Entnahme_Artikel$RechnungsNummer', 'RechnungsNummer')
-    )
+class Shipping(TableDeclarativeBase):
 
-    ID: Mapped[int] = mapped_column(Integer, Identity(start=1, increment=1), primary_key=True)
-    SSMA_TimeStamp: Mapped[bytes] = mapped_column(TIMESTAMP)
-    ArtikelNummer: Mapped[Optional[str]] = mapped_column(Unicode(255))
-    Anzahl: Mapped[Optional[float]] = mapped_column(Float(53), server_default=text('((0))'))
-    RechnungsNummer: Mapped[Optional[str]] = mapped_column(Unicode(255))
-    Stückpreis: Mapped[Optional[Any]] = mapped_column(MONEY)
-    Rabatt: Mapped[Optional[float]] = mapped_column(Float(53))
-    Einheit: Mapped[Optional[str]] = mapped_column(NCHAR(10))
-    Anmerkung: Mapped[Optional[str]] = mapped_column(Unicode(255))
+    __tablename__ = "shipping"
 
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, nullable=False)
+    name_english = Column(String, nullable=True)
+    insured = Column(Float, nullable=False)
+    price = Column(Float, nullable=False)
+    weight_up_to = Column(Float, nullable=True)
+    country_class = Column(String, nullable=True)
+    dimension_1 = Column(Float, nullable=True)
+    dimension_2 = Column(Float, nullable=True)
+    dimension_3 = Column(Float, nullable=True)
 
-class KundenÜbersicht(Base):
-    __tablename__ = 'Kunden_Übersicht'
-    __table_args__ = (
-        PrimaryKeyConstraint('KundenNummer', name='Kunden_Übersicht$PrimaryKey'),
-    )
-
-    KundenNummer: Mapped[int] = mapped_column(Integer, Identity(start=1, increment=1), primary_key=True)
-    Nachname: Mapped[Optional[str]] = mapped_column(Unicode(255))
-    Vorname: Mapped[Optional[str]] = mapped_column(Unicode(255))
-    Straße: Mapped[Optional[str]] = mapped_column(Unicode(255))
-    PLZ: Mapped[Optional[str]] = mapped_column(Unicode(255))
-    Ort: Mapped[Optional[str]] = mapped_column(Unicode(255))
-    Land: Mapped[Optional[str]] = mapped_column(Unicode(255))
-    Firmenname: Mapped[Optional[str]] = mapped_column(Unicode(255))
-
-    Rechnung_Kunde: Mapped[List['RechnungKunde']] = relationship('RechnungKunde', back_populates='Kunden_Übersicht')
+    def __repr__(self):
+        return f"Shipping {self.id} {self.name} {self.price}"
 
 
-class LieferantES(Base):
-    __tablename__ = 'Lieferant_ES'
-    __table_args__ = (
-        PrimaryKeyConstraint('ID', name='Lieferant_ES$PrimaryKey'),
-        Index('Lieferant_ES$Artikelnummer', 'Artikelnummer'),
-        Index('Lieferant_ES$Nummer', 'Nummer')
-    )
+class Invoice(TableDeclarativeBase):
 
-    ID: Mapped[int] = mapped_column(Integer, Identity(start=1, increment=1), primary_key=True)
-    Artikelnummer: Mapped[Optional[str]] = mapped_column(Unicode(255))
-    Lieferant: Mapped[Optional[str]] = mapped_column(Unicode(255))
-    Bewertung: Mapped[Optional[int]] = mapped_column(Integer, server_default=text('((0))'))
-    Nummer: Mapped[Optional[int]] = mapped_column(Integer, server_default=text('((0))'))
+    __tablename__ = "invoices"
 
+    id = Column(String, primary_key=True)
+    customer_id = Column(Integer, ForeignKey('customers.id'))
+    price = Column(Float, nullable=False)
+    cash = Column(Boolean, nullable=False, default=False)
+    invoice_date = Column(DateTime(timezone=True), nullable=False)
+    payment_date = Column(DateTime(timezone=True), nullable=True)
+    shipping_id = Column(Integer, ForeignKey('shipping.id'))
+    shipping_price = Column(Float, nullable=True)
 
-t_Merch_Optionen = Table(
-    'Merch_Optionen', Base.metadata,
-    Column('ID', Integer, nullable=False),
-    Column('Text', TEXT(2147483647, 'SQL_Latin1_General_CP1_CI_AS'), nullable=False)
-)
+    customer = relationship("Customer")
+    shipping = relationship("Shipping")
+    products = relationship("ProductsSold", viewonly=True)
 
-
-t_Projekt_Artikel = Table(
-    'Projekt_Artikel', Base.metadata,
-    Column('ProjektID', Integer, nullable=False),
-    Column('ESArtikel', String(50, 'SQL_Latin1_General_CP1_CI_AS'), nullable=False),
-    Column('Menge', Float(53))
-)
+    def __repr__(self):
+        return f"Invoice {self.id}, {self.invoice_date}, {self.customer}"
 
 
-t_Projekt_Beschreibung = Table(
-    'Projekt_Beschreibung', Base.metadata,
-    Column('ID', Integer, nullable=False),
-    Column('Name', Unicode(50), nullable=False),
-    Column('KundenNummer', Integer),
-    Column('Beschreibung', TEXT(2147483647, 'SQL_Latin1_General_CP1_CI_AS')),
-    Column('StartDatum', Date),
-    Column('Abgerechnet', Boolean)
-)
+class ESProduct(TableDeclarativeBase):
+
+    __tablename__ = "es_products"
+
+    id = Column(String, primary_key=True)
+    name = Column(Text, nullable=False)
+    gross_selling_price = Column(Float, nullable=False)
+    category = Column(String, nullable=False)
+    notes = Column(String, nullable=True)
+
+    sellers = relationship("ESSupplier", viewonly=True)
+
+    def __repr__(self):
+        return f"ES-Product {self.id} - {self.name}"
 
 
-class RechnungLieferant(Base):
-    __tablename__ = 'Rechnung_Lieferant'
-    __table_args__ = (
-        PrimaryKeyConstraint('RechnungsNummer', name='2_Rechnung_Lieferant$PrimaryKey'),
-        Index('2_Rechnung_Lieferant$RechnungsNummer', 'Rechnungsdatum')
-    )
+class ESSupplier(TableDeclarativeBase):
 
-    RechnungsNummer: Mapped[str] = mapped_column(Unicode(255), primary_key=True)
-    SSMA_TimeStamp: Mapped[bytes] = mapped_column(TIMESTAMP)
-    Rechnungsdatum: Mapped[Optional[datetime.datetime]] = mapped_column(DATETIME2)
-    Zahlungsdatum: Mapped[Optional[datetime.datetime]] = mapped_column(DATETIME2)
-    Lieferant: Mapped[Optional[str]] = mapped_column(Unicode(255))
-    BetragNetto: Mapped[Optional[Any]] = mapped_column(MONEY)
-    BetragBrutto: Mapped[Optional[Any]] = mapped_column(MONEY, server_default=text('((0))'))
-    Bemerkung: Mapped[Optional[str]] = mapped_column(Unicode(255))
-    Art: Mapped[Optional[str]] = mapped_column(Unicode(255))
-    Kasse: Mapped[Optional[bool]] = mapped_column(Boolean, server_default=text('((0))'))
-    RechnungsbelegDa: Mapped[Optional[bool]] = mapped_column(Boolean, server_default=text('((0))'))
-    ZahlungsbelegDa: Mapped[Optional[bool]] = mapped_column(Boolean, server_default=text('((0))'))
-    Link: Mapped[Optional[str]] = mapped_column(Unicode(255))
-    Versandkosten: Mapped[Optional[float]] = mapped_column(Float(53))
-    geprueft: Mapped[Optional[bool]] = mapped_column(Boolean)
+    __tablename__ = "es_supplier"
+
+    es_product_id = Column(String, ForeignKey("es_products.id"), primary_key=True)
+    seller_product_id = Column(String, ForeignKey("supplier_products.id"), primary_key=True)
+    rating = Column(Integer, nullable=False)
+    rank = Column(Integer, nullable=False, default=1)
+
+    es_product = relationship("ESProduct")
+    seller_product = relationship("SupplierProduct")
+
+    def __repr__(self):
+        return f"ES Product {self.es_product} bought as {self.seller_product_id}"
 
 
-t_Versand = Table(
-    'Versand', Base.metadata,
-    Column('Versandart', Unicode),
-    Column('Kosten', MONEY),
-    Column('VersichertBis', MONEY),
-    Column('Ländergruppe', Integer),
-    Column('GewichtBis', Float(53)),
-    Column('EnglischerName', Unicode),
-    Column('Länge1', Float(53)),
-    Column('Länge2', Float(53)),
-    Column('Länge3', Float(53))
-)
+class ProductsSold(TableDeclarativeBase):
+
+    __tablename__ = "products_sold"
+
+    invoice_id = Column(String, ForeignKey("invoices.id"), primary_key=True)
+    product_id = Column(String, ForeignKey("es_products.id"), primary_key=True)
+    name = Column(Text, nullable=False)
+    amount = Column(Float, nullable=False)
+    price_per_item = Column(Float, nullable=False)
+    discount = Column(Float, nullable=False)
+    unit = Column(String, nullable=False)
+    note = Column(String, nullable=True)
+
+    invoice = relationship("Invoice")
+    product = relationship("ESProduct")
+
+    def __repr__(self):
+        return f"{self.amount}x {self.product.id} sold in invoice {self.invoice.id}"
 
 
-class WareneingangArtikel(Base):
-    __tablename__ = 'Wareneingang_Artikel'
-    __table_args__ = (
-        PrimaryKeyConstraint('ID', name='1_Wareneingang_Artikel$PrimaryKey'),
-        Index('1_Wareneingang_Artikel$ArtikelNummer', 'ArtikelNummer'),
-        Index('1_Wareneingang_Artikel$ID', 'ID'),
-        Index('1_Wareneingang_Artikel$RechnungsNummer', 'RechnungsNummer')
-    )
+class Supplier(TableDeclarativeBase):
 
-    ID: Mapped[int] = mapped_column(Integer, Identity(start=1, increment=1), primary_key=True)
-    SSMA_TimeStamp: Mapped[bytes] = mapped_column(TIMESTAMP)
-    RechnungsNummer: Mapped[Optional[str]] = mapped_column(Unicode(255))
-    ArtikelNummer: Mapped[Optional[str]] = mapped_column(Unicode(255))
-    Anzahl: Mapped[Optional[float]] = mapped_column(Float(53), server_default=text('((0))'))
-    Verkaufspreis: Mapped[Optional[Any]] = mapped_column(MONEY)
+    __tablename__ = "suppliers"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, nullable=False)
+    website = Column(String, nullable=True)
+    banking_details = Column(String, nullable=True)
+
+    invoices = relationship("Receipt", viewonly=True)
+
+    def __repr__(self):
+        return f"Seller {self.id} - {self.name}"
 
 
-class RechnungKunde(Base):
-    __tablename__ = 'Rechnung_Kunde'
-    __table_args__ = (
-        ForeignKeyConstraint(['KundenNummer'], ['Kunden_Übersicht.KundenNummer'], name='FK_4_Rechnung_Kunde_Kunden_Übersicht'),
-        PrimaryKeyConstraint('Rechnungsnummer', name='4_Rechnung_Kunde$PrimaryKey'),
-        Index('4_Rechnung_Kunde$KundenNummer', 'KundenNummer')
-    )
+class Receipt(TableDeclarativeBase):
 
-    Rechnungsnummer: Mapped[str] = mapped_column(Unicode(255), primary_key=True)
-    Steuer: Mapped[int] = mapped_column(Integer, server_default=text('((0))'))
-    Datum: Mapped[Optional[datetime.datetime]] = mapped_column(DATETIME2)
-    KundenNummer: Mapped[Optional[int]] = mapped_column(Integer, server_default=text('((0))'))
-    Betrag: Mapped[Optional[Any]] = mapped_column(MONEY, server_default=text('((0))'))
-    Versandart: Mapped[Optional[str]] = mapped_column(Unicode(255))
-    Versandkosten: Mapped[Optional[Any]] = mapped_column(MONEY)
-    Kasse: Mapped[Optional[bool]] = mapped_column(Boolean)
-    Zahlungsdatum: Mapped[Optional[datetime.datetime]] = mapped_column(DATETIME2)
+    __tablename__ = "receipts"
 
-    Kunden_Übersicht: Mapped['KundenÜbersicht'] = relationship('KundenÜbersicht', back_populates='Rechnung_Kunde')
+    id = Column(String, primary_key=True)
+    seller_id = Column(Integer, ForeignKey("suppliers.id"), nullable=False)
+    price = Column(Float, nullable=False)
+    cash = Column(Boolean, nullable=False, default=False)
+    category = Column(String, nullable=True)
+    invoice_date = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), default=func.now())
+    payment_date = Column(DateTime(timezone=True), nullable=True)
+    invoice_receipt = Column(String, nullable=True)
+    payment_receipt = Column(String, nullable=True)
+
+    seller = relationship("Supplier")
+    products = relationship("ProductsBought", viewonly=True)
 
 
-engine = create_engine(
-    f"mssql+pyodbc://{config.database.username}:{config.database.password.get_secret_value()}@{config.database.server}:1433/{config.database.database}?driver=ODBC+Driver+17+for+SQL+Server"
-)
-Session = sessionmaker(bind=engine)
-session = Session()
+class SupplierProduct(TableDeclarativeBase):
+
+    __tablename__ = "supplier_products"
+
+    id = Column(String, primary_key=True)
+    name = Column(Text, nullable=False)
+    net_price = Column(Float, nullable=False)
+    gross_selling_rec = Column(Float, nullable=True)
+    category = Column(String, nullable=True)
+    image_path = Column(String, nullable=True)
+    url = Column(String, nullable=True)
+
+    def __repr__(self):
+        return f"Seller product {self.id} - {self.name}"
+
+
+class ProductsBought(TableDeclarativeBase):
+
+    __tablename__ = "products_bought"
+
+    invoice_id = Column(String, ForeignKey("receipts.id"), primary_key=True)
+    product_id = Column(String, ForeignKey("supplier_products.id"), primary_key=True)
+    amount = Column(Float, nullable=False)
+    price = Column(Float, nullable=False)
+
+    invoice = relationship("Receipt")
+    product = relationship("SupplierProduct")
+
+    def __repr__(self):
+        return f"Product {self.product_id} sold in {self.invoice_id}"
+
+
+TableDeclarativeBase.metadata.create_all(bind=engine)

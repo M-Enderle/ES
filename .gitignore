@@ -5,4 +5,4 @@ __pycache__
 geckodriver.exe
 geckodriver.log
 deprecated
-```
+es.db
