@@ -1,53 +1,63 @@
-import tkinter
-from tkinter import Tk
-from tkinter import Frame
-from tkinter import Button
-from tkinter import Label
-from tkinter import Toplevel
-from tkinter import messagebox
-from tkinter import filedialog
-from tkinter import Entry
-from tkinter import Text
+import TKinterModernThemes as TKMT
 
-from PIL import Image, ImageTk
+from es.modules import invoice, receipt, analytics
+from es.utils.tkinter_utils import add_image_to_frame
+from es.utils.utils import get_project_root
 
 
+class App(TKMT.ThemedTKinterFrame):
+    def __init__(self):
+        super().__init__("Enderle Solutions", mode="dark")
 
-class mainFrame:
-    def __init__(self, master):
-        self.master = master
-        self.master.geometry("300x700+10+10")
-        self.frame = Frame(self.master)
-        self.butnew("Ausgangs-Rechnung schreiben", "rechnungSchreiben")
-        self.butnew("Lieferanten-Rechnung einpflegen", "rechnungEinpflegen")
-        Label(self.frame, text="--- Korrekturen ---", font=("Arial", 7)).pack(pady=0)
-        self.butnew("Lieferanten-Rechnung löschen", "lieferantenFehlerBeheben")
-        self.butnew("Zahlung Ausgangsrechnung", "zahlungsBelegHochladen")
-        self.butnew("Ausgangs-Rechnung korrigieren", "rechnungKorrigieren")
-        Label(self.frame, text="--- Auswertungen ---", font=("Arial", 7)).pack(pady=0)
-        self.butnew("Auswertung", "Auswertung")
-        Label(self.frame, text="--- Andere ---", font=("Arial", 7)).pack(pady=0)
-        self.quit = Button(self.frame, text="Schließen", command=self.close_window).pack(pady=10)
-        self.releaseNotes = Label(self.master, text="Version 1.0.0", font=("Arial", 7))
-        self.releaseNotes.bind("<Button-1>", self.printReleaseNotes)
-        self.releaseNotes.pack(side="bottom")
-        self.frame.pack()
+        self.Label("Rechnungssoftware").grid(row=1, column=0, pady=(30, 0))
 
-    def printReleaseNotes(self, event):
-        print("Version 1.1.0 - Changes:")
-        print("- Hinzufügen des Auswertungsbuttons")
+        img = add_image_to_frame(self, f"{get_project_root()}/assets/images/logo.png", 0.3)
+        img.grid(row=0, column=0, pady=(50, 0))
+        
 
-    def butnew(self, text, _class):
-        Button(self.frame, text=text, command=lambda: self.new_window(_class)).pack(pady=10)
+        self.notebook = self.Notebook("Notebook Test")
+        self.inv_tab = self.notebook.addTab("Rechnungen")
+        self.corrections_tab = self.notebook.addTab("Korrekturen")
+        self.analytics_tab = self.notebook.addTab("Analysen")
 
-    def new_window(self, _class):
-        pass
+        self.close_button = self.Button(
+            "Schließen",
+            command=self.root.destroy,
+            widgetkwargs={
+                "width": 40,
+            },
+            pady=20
+        )
 
-    def close_window(self):
-        self.master.destroy()
+        self.add_buttons()
+        
+    def add_buttons(self):
 
+        self.inv_tab.Button(
+            "Ausgangsrechnung schreiben",
+            command=lambda: print("Ausgangsrechnung schreiben"),
+            widgetkwargs={
+                "width": 40,
+            },
+            pady=(20, 13)
+        )
 
-if __name__ == "__main__":
-    root = Tk()
-    root.tk.call('tk', 'scaling', 1.7)
-    root.mainloop()
+        self.inv_tab.Button(
+            "Eingangsrechnung schreiben",
+            command=lambda: print("Eingangsrechnung schreiben"),
+            widgetkwargs={
+                "width": 40,
+            },
+            pady=(13, 30)
+        )
+
+        self.analytics_tab.Button(
+            "Analyse starten",
+            command=lambda: analytics.open_streamlit(),
+            widgetkwargs={
+                "width": 40,
+            },
+            pady=(20, 13)
+        )
+
+        
